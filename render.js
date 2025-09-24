@@ -40,6 +40,8 @@ module.exports = {
 
             result = sectionA + sectionB
         }
+
+        // Since emojis can be several characters, we use placeholder letters and replace them with the emojis at the end.
         result = result
             .replaceAll("S", snakeTileCharacter)
             .replaceAll("A", appleTileCharacter)

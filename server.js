@@ -15,6 +15,23 @@ const database = {
 database.moveSnake = function (game, x, y) {
 	let lastPosition = 0
 
+	// If game over, reset to normal when moving instead of making another move.
+	if (game.gameOver) {
+		game.snake = [
+			[3, 1],
+			[2, 1],
+			[1, 1]
+		]
+		game.apples = [
+			[6, 6]
+		]
+		game.score = 0
+
+		game.gameOver = false
+
+		return
+	}
+
 	for (let i = 0; i < game.snake.length; ++i) {
 		if (!lastPosition) {
 			lastPosition = [game.snake[i][0], game.snake[i][1]]
@@ -36,8 +53,44 @@ database.moveSnake = function (game, x, y) {
 			) {
 				game.score += 1
 
-				game.apples[j][0] = 1
-				game.apples[j][1] = 1
+				game.snake.push(lastPosition)
+
+				let correctSpot = false
+
+				while (!correctSpot) {
+					game.apples[j][0] = Math.floor(Math.random() * 12)
+					game.apples[j][1] = Math.floor(Math.random() * 12)
+
+					correctSpot = true
+
+					for (let k = 0; k < game.snake.length; ++k) {
+						if (
+							(game.apples[j][0] == game.snake[k][0]) &&
+							(game.apples[j][1] == game.snake[k][1])
+						) {
+							correctSpot = false
+						}
+					}
+
+					for (let k = 0; k < game.apples.length; ++k) {
+						if (
+							(game.apples[j][0] == game.apples[k][0]) &&
+							(game.apples[j][1] == game.apples[k][1]) &&
+							(j != k)
+						) {
+							correctSpot = false
+						}
+					}
+				}
+			}
+		}
+
+		for (let j = 1; j < game.snake.length; ++j) {
+			if (
+				(game.snake[j][0] == game.snake[0][0]) &&
+				(game.snake[j][1] == game.snake[0][1])
+			) {
+				game.gameOver = true
 			}
 		}
 	}
@@ -68,8 +121,14 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 }
 
 database.formatMessage = function (game) {
-	return `\`\`\`\n${renderText(game)}\n\`\`\`
-### Score: ${game.score}. Use /up, /down, /left, /right to play!`
+	if (game.gameOver) {
+		return `\`\`\`\n${renderText(game)}\n\`\`\`
+# GAME OVER! :(
+## Final score: ${game.score}. Click any button below to reset.`
+	} else {
+		return `\`\`\`\n${renderText(game)}\n\`\`\`
+## Score: ${game.score}. Click the buttons below to play!`
+	}
 }
 
 const foldersPath = path.join(__dirname, 'commands');
@@ -104,6 +163,15 @@ client.on(Events.InteractionCreate, async interaction => {
 
 		let data = database.guilds[interaction.guild.id]
 		let game = data.game
+
+		if (game.lastInteractee == interaction.user.id) {
+			await interaction.reply({
+            	content: "**You can't make two turns in a row!** Let someone else have a turn first.",
+            	ephemeral: true
+        	})
+		}
+
+		game.lastInteractee = interaction.user.id
 
 		if (interaction.customId == "up") {
 			database.moveSnake(game, 0, -1)
