@@ -3,10 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
 const { token } = require('./config.json');
-const { renderText } = require('./render.js')
+const { renderText } = require('./render.js');
+const { data } = require('./commands/utils/play.js');
 
 // Init database
 const database = {
+	currentModifier: "cheese",
 	guilds: {
 
 	}
@@ -22,8 +24,32 @@ database.moveSnake = function (game, x, y) {
 			[2, 1],
 			[1, 1]
 		]
+
+		if (database.currentModifier == "cheese") {
+			game.snake = [
+				[6, 1, 1],
+				[5, 1, 0],
+				[4, 1, 1],
+				[3, 1, 0],
+				[2, 1, 1],
+				[1, 1, 0]
+			]
+		}
+
 		game.apples = [
-			[6, 6]
+			[8, 7]
+		]
+
+		if (database.currentModifier == "threeFruits") {
+			game.apples = [
+				[8, 7],
+				[4, 11],
+				[12, 3]
+			]
+		}
+
+		game.walls = [
+
 		]
 		game.score = 0
 
@@ -34,10 +60,14 @@ database.moveSnake = function (game, x, y) {
 
 	for (let i = 0; i < game.snake.length; ++i) {
 		if (!lastPosition) {
-			lastPosition = [game.snake[i][0], game.snake[i][1]]
+			lastPosition = [game.snake[i][0], game.snake[i][1], game.snake[i][2]]
 
 			game.snake[i][0] += x
 			game.snake[i][1] += y
+
+			if (database.currentModifier == "cheese") {
+				game.snake[i][2] = (game.snake[i][2] == 0) ? 1 : 0
+			}
 		} else {
 			let currentPosition = game.snake[i]
 
@@ -45,53 +75,77 @@ database.moveSnake = function (game, x, y) {
 
 			lastPosition = currentPosition
 		}
+	}
 
-		for (let j = 0; j < game.apples.length; ++j) {
-			if (
-				(game.apples[j][0] == game.snake[0][0]) &&
-				(game.apples[j][1] == game.snake[0][1])
-			) {
-				game.score += 1
+	for (let j = 0; j < game.apples.length; ++j) {
+		if (
+			(game.apples[j][0] == game.snake[0][0]) &&
+			(game.apples[j][1] == game.snake[0][1])
+		) {
+			game.score += 1
 
-				game.snake.push(lastPosition)
+			game.snake.push(lastPosition)
 
-				let correctSpot = false
+			let correctSpot = false
 
-				while (!correctSpot) {
-					game.apples[j][0] = Math.floor(Math.random() * 12)
-					game.apples[j][1] = Math.floor(Math.random() * 12)
+			while (!correctSpot) {
+				game.apples[j][0] = Math.floor(Math.random() * 15)
+				game.apples[j][1] = Math.floor(Math.random() * 17)
 
-					correctSpot = true
+				correctSpot = true
 
-					for (let k = 0; k < game.snake.length; ++k) {
-						if (
-							(game.apples[j][0] == game.snake[k][0]) &&
-							(game.apples[j][1] == game.snake[k][1])
-						) {
-							correctSpot = false
-						}
+				for (let k = 0; k < game.snake.length; ++k) {
+					if (
+						(game.apples[j][0] == game.snake[k][0]) &&
+						(game.apples[j][1] == game.snake[k][1])
+					) {
+						correctSpot = false
 					}
+				}
 
-					for (let k = 0; k < game.apples.length; ++k) {
-						if (
-							(game.apples[j][0] == game.apples[k][0]) &&
-							(game.apples[j][1] == game.apples[k][1]) &&
-							(j != k)
-						) {
-							correctSpot = false
-						}
+				for (let k = 0; k < game.walls.length; ++k) {
+					if (
+						(game.apples[j][0] == game.walls[k][0]) &&
+						(game.apples[j][1] == game.walls[k][1])
+					) {
+						correctSpot = false
+					}
+				}
+
+				for (let k = 0; k < game.apples.length; ++k) {
+					if (
+						(game.apples[j][0] == game.apples[k][0]) &&
+						(game.apples[j][1] == game.apples[k][1]) &&
+						(j != k)
+					) {
+						correctSpot = false
 					}
 				}
 			}
 		}
+	}
 
-		for (let j = 1; j < game.snake.length; ++j) {
-			if (
-				(game.snake[j][0] == game.snake[0][0]) &&
-				(game.snake[j][1] == game.snake[0][1])
-			) {
-				game.gameOver = true
-			}
+	for (let j = 0; j < game.walls.length; ++j) {
+		if (
+			(game.walls[j][0] == game.snake[0][0]) &&
+			(game.walls[j][1] == game.snake[0][1])
+		) {
+			game.gameOver = true
+
+			break
+		}
+	}
+
+	for (let j = 1; j < game.snake.length; ++j) {
+		if (
+			(game.snake[j][0] == game.snake[0][0]) &&
+			(game.snake[j][1] == game.snake[0][1]) &&
+			(game.snake[j][2] != 0)
+		) {
+			console.log(game.snake[j][2])
+			game.gameOver = true
+
+			break
 		}
 	}
 }
@@ -104,13 +158,13 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 			game: {
 				lastInteractee: 0,
 				score: 0,
+				gameOver: true,
 				snake: [
-					[3, 1],
-					[2, 1],
-					[1, 1]
 				],
 				apples: [
-					[6, 6]
+				],
+				walls: [
+
 				]
 			}
 		}
@@ -125,7 +179,16 @@ database.formatMessage = function (game) {
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
 # GAME OVER! :(
 ## Final score: ${game.score}. Click any button below to reset.`
-	} else {
+	} else if (game.gameWon) {
+		return `\`\`\`\n${renderText(game)}\n\`\`\`
+# YOU WIN! :D
+## Final score: ${game.score}. Click any button below to reset.`
+	} else if (game.gameReset) {
+		return `\`\`\`\n${renderText(game)}\n\`\`\`
+# GAME END!
+## You've run out of time. Leaderboard and modifiers have been reset.
+## Final score: ${game.score}. Click any button below to reset.`
+	} {
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
 ## Score: ${game.score}. Click the buttons below to play!`
 	}
@@ -164,11 +227,13 @@ client.on(Events.InteractionCreate, async interaction => {
 		let data = database.guilds[interaction.guild.id]
 		let game = data.game
 
-		if (game.lastInteractee == interaction.user.id) {
+		if (game.lastInteractee == interaction.user.id && false) {
 			await interaction.reply({
-            	content: "**You can't make two turns in a row!** Let someone else have a turn first.",
-            	ephemeral: true
-        	})
+				content: "**You can't make two turns in a row!** Let someone else have a turn first.",
+				ephemeral: true
+			})
+
+			return
 		}
 
 		game.lastInteractee = interaction.user.id
@@ -207,9 +272,9 @@ client.on(Events.InteractionCreate, async interaction => {
 			.addComponents(up, down, left, right);
 
 		await interaction.reply({
-            content: database.formatMessage(game),
-            components: [row]
-        })
+			content: database.formatMessage(game),
+			components: [row]
+		})
 	}
 
 	if (!interaction.isChatInputCommand()) return;
