@@ -12,12 +12,13 @@
     "url": "git+https://github.com/ToasterPanic/frankbot.git"
   },
   "author": "ToasterPanic",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ToasterPanic/frankbot/issues"
   },
   "homepage": "https://github.com/ToasterPanic/frankbot#readme",
   "dependencies": {
-    "discord.js": "^14.22.1"
+    "discord.js": "^14.22.1",
+    "js-yaml": "^4.1.0"
   }
 }

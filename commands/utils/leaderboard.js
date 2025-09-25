@@ -9,21 +9,7 @@ module.exports = {
         // All of this is bad. All of it. It desperately needs to be redone. Like DESPERATELY.
         // I'll do it once I clean some stuff up + implement all the modifiers I want to.
 
-        let keys = Object.keys(database.guilds)
-        let values = Object.values(database.guilds)
-        let items = []
-        
-        // Add all the items to an array in a, frankly, weird way
-        for (let i = 0; i < keys.length; ++i) {
-            items.push([keys[i], values[i]])
-        }
-
-        // Sort each guild based on the highest score. If two scores match, they are sorted by moves.
-        items = items.sort((a, b) => {
-            if (a[1].game.bestScore == b[1].game.bestScore) {
-                return b[1].game.bestMoves - a[1].game.bestMoves
-            } else return a[1].game.bestScore - b[1].game.bestScore
-        })
+        let items = database.leaderboard
 
         let place = 0
 
@@ -36,10 +22,17 @@ module.exports = {
             }
         }
 
+        // Get the ending bit (1st, 2nd, 3rd, 4th instead of 1st, 2st, 3st, 4st)
+        let endingBit = "th"
+
+        if ((place % 10) == 1) endingBit = "st"
+        else if ((place % 10) == 2) endingBit = "nd"
+        else if ((place % 10) == 3) endingBit = "rd"
+
         // Yes this looks ugly. I do not care in the slightest at the moment.
         let result = `# Leaderboard <:skoliosis:1420223788213338184>
 
-## You are in **${place}st!**
+## You are in **${place}${endingBit}!**
 
 `
         

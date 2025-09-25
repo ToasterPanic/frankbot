@@ -2,19 +2,26 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const { token, allowedModifiers, playersShouldTakeTurns } = require('./config.json');
 const { renderText } = require('./render.js');
 const { data } = require('./commands/utils/play.js');
+
+const yaml = require('js-yaml');
+
+const config = yaml.load(fs.readFileSync('./config.yaml', 'utf8'))
 
 // Init database
 const database = {
 	currentModifier: "standard",
+	currentFruit: config.fruitTypes[0],
 	guilds: {
 
 	},
+	boardSizeX: config.defaultBoardSizeX,
+	boardSizeY: config.defaultBoardSizeY,
 	currentDay: 0,
 }
 
+// The function that moves the snake. Why is it in the bot's database? Only God knows.
 database.moveSnake = function (game, x, y) {
 	let lastPosition = 0
 
@@ -41,14 +48,14 @@ database.moveSnake = function (game, x, y) {
 		}
 
 		game.apples = [
-			[8, 7]
+			[Math.ceil(database.boardSizeX / 2), Math.ceil(database.boardSizeY / 2)]
 		]
 
 		if (database.currentModifier == "threeFruits") {
 			game.apples = [
-				[8, 7],
-				[4, 11],
-				[12, 3]
+				[Math.ceil(database.boardSizeX / 2), Math.ceil(database.boardSizeY / 2)],
+				[Math.ceil(database.boardSizeX / 2) - 2, Math.ceil(database.boardSizeY / 2) - 2],
+				[Math.ceil(database.boardSizeX / 2) + 2, Math.ceil(database.boardSizeY / 2) + 2]
 			]
 		}
 
@@ -75,20 +82,20 @@ database.moveSnake = function (game, x, y) {
 
 			if (database.currentModifier == "borderless") {
 				if (game.snake[i][0] < 0) {
-					game.snake[i][0] = 16
-				} else if (game.snake[i][0] > 16) {
+					game.snake[i][0] = database.boardSizeX - 1
+				} else if (game.snake[i][0] > (database.boardSizeX - 1)) {
 					game.snake[i][0] = 0
 				} else if (game.snake[i][1] < 0) {
-					game.snake[i][1] = 14
-				} else if (game.snake[i][1] > 14) {
+					game.snake[i][1] = database.boardSizeY - 1
+				} else if (game.snake[i][1] > (database.boardSizeY - 1)) {
 					game.snake[i][1] = 0
 				}
 			} else {
 				if (
 					(game.snake[i][0] < 0) ||
-					(game.snake[i][0] > 16) ||
+					(game.snake[i][0] > (database.boardSizeX - 1)) ||
 					(game.snake[i][1] < 0) ||
-					(game.snake[i][1] > 14)
+					(game.snake[i][1] > (database.boardSizeY - 1))
 				) {
 					game.gameOver = true
 
@@ -129,8 +136,8 @@ database.moveSnake = function (game, x, y) {
 				let attempts = 0
 
 				while (!correctSpot) {
-					wall[0] = (Math.floor((Math.random() * 8)) * 2) + 1
-					wall[1] = (Math.floor((Math.random() * 7)) * 2) + 1
+					wall[0] = (Math.floor((Math.random() * (database.boardSizeX - 1))) * 2) + 1
+					wall[1] = (Math.floor((Math.random() * (database.boardSizeY - 1))) * 2) + 1
 
 					correctSpot = true
 
@@ -175,8 +182,8 @@ database.moveSnake = function (game, x, y) {
 			let correctSpot = false
 
 			while (!correctSpot) {
-				game.apples[j][0] = Math.floor(Math.random() * 17)
-				game.apples[j][1] = Math.floor(Math.random() * 15)
+				game.apples[j][0] = Math.floor(Math.random() * database.boardSizeX)
+				game.apples[j][1] = Math.floor(Math.random() * database.boardSizeY)
 
 				correctSpot = true
 
@@ -240,8 +247,8 @@ database.moveSnake = function (game, x, y) {
 	}
 
 	if (
-		((database.currentModifier == "walls") && (game.snake.length > 196)) ||
-		(game.snake.length > 252)
+		((database.currentModifier == "walls") && (game.snake.length > ((config.defaultBoardSizeX * config.defaultBoardSizeY) * 0.77777778) - 3)) ||
+		((game.snake.length > (database.boardSizeX * database.boardSizeY) - 3))
 	) game.gameWon = true
 }
 
@@ -277,23 +284,23 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 database.formatMessage = function (game) {
 	// WALLED: 196, OTHER: 252
 	if (game.gameWon) {
-		return `\`\`\`\n${renderText(game)}\n\`\`\`
+		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
 # YOU WIN! :D
 ## Final score: ${game.score}. Click any button below to reset.`
 	} else if (game.gameReset) {
 		game.gameOver = true
 
-		return `\`\`\`\n${renderText(game)}\n\`\`\`
+		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
 # GAME END!
 ## You've run out of time. Leaderboard and modifiers have been reset.
 ## Final score: ${game.score}. Click any button below to reset.`
 	} else if (game.gameOver) {
-		return `\`\`\`\n${renderText(game)}\n\`\`\`
+		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
 # GAME OVER! :(
 ## Final score: ${game.score}. Click any button below to reset.`
 	} else {
-		return `\`\`\`\n${renderText(game)}\n\`\`\`
-## Score: ${game.score}. Modifier: ${database.currentModifier} Click the buttons to play!`
+		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
+## Score: ${game.score}. Modifier: ${database.currentModifier}. Click the buttons to play!`
 	}
 }
 
@@ -302,8 +309,6 @@ const commandFolders = fs.readdirSync(foldersPath);
 
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-const test = "ajajaja"
 
 client.commands = new Collection();
 
@@ -331,7 +336,7 @@ client.on(Events.InteractionCreate, async interaction => {
 		let game = data.game
 
 		// Don't let people make more than one turn in a row
-		if (game.lastInteractee == interaction.user.id && playersShouldTakeTurns) {
+		if (game.lastInteractee == interaction.user.id && config.playersShouldTakeTurns) {
 			await interaction.reply({
 				content: "**You can't make two turns in a row!** Let someone else have a turn first.",
 				ephemeral: true
@@ -424,18 +429,47 @@ function checkDate() {
 	if (now.getUTCDate() != database.currentDay) {
 		database.currentDay = now.getUTCDate()
 
-		database.currentModifier = allowedModifiers[Math.floor(Math.random() * allowedModifiers.length)]
+		database.currentModifier = config.allowedModifiers[Math.floor(Math.random() * config.allowedModifiers.length)]
+
+		database.currentFruit = config.fruitTypes[Math.floor(Math.random() * config.fruitTypes.length)]
 
 		for (let i = 0; i < Object.keys(database.guilds).length; ++i) {
 			database.guilds[Object.keys(database.guilds)[i]].game.gameReset = true
 			database.guilds[Object.keys(database.guilds)[i]].game.bestMoves = 0
 			database.guilds[Object.keys(database.guilds)[i]].game.bestScore = 0
 		}
+
+		if (database.currentModifier == "largeBoard") {
+			database.boardSizeX = config.largeBoardSizeX
+			database.boardSizeY = config.largeBoardSizeY
+		} else if (database.currentModifier == "smallBoard") {
+			database.boardSizeX = config.smallBoardSizeX
+			database.boardSizeY = config.smallBoardSizeY
+		} else {
+			database.boardSizeX = config.defaultBoardSizeX
+			database.boardSizeY = config.defaultBoardSizeY
+		}
 	}
+
+	let keys = Object.keys(database.guilds)
+	let values = Object.values(database.guilds)
+	database.leaderboard = []
+
+	// Add all the items to an array in a, frankly, weird way
+	for (let i = 0; i < keys.length; ++i) {
+		database.leaderboard.push([keys[i], values[i]])
+	}
+
+	// Sort each guild based on the highest score. If two scores match, they are sorted by moves.
+	database.leaderboard = database.leaderboard.sort((a, b) => {
+		if (a[1].game.bestScore == b[1].game.bestScore) {
+			return b[1].game.bestMoves - a[1].game.bestMoves
+		} else return a[1].game.bestScore - b[1].game.bestScore
+	})
 }
 
 // Run every 60 seconds, so it isn't running unneccesarially fast
-setInterval(checkDate, 15e3)
+setInterval(checkDate, 60e3)
 
 // Also run now
 checkDate()
@@ -448,4 +482,4 @@ client.once(Events.ClientReady, readyClient => {
 });
 
 // Log in to Discord with your client's token
-client.login(token);
+client.login(config.token);

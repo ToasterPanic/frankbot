@@ -8,7 +8,7 @@ module.exports = {
         let data = database.guilds[interaction.guild.id]
         let game = data.game
 
-        const up = new ButtonBuilder()
+        const button1 = new ButtonBuilder()
 			.setCustomId('button1')
 			.setLabel('me when when when when when when whenw h=jndksvml/zl')
 			.setStyle(ButtonStyle.Primary)

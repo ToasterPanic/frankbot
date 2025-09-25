@@ -1,0 +1,49 @@
+# Welcome to the config! Make sure to save it in UTF-8, otherwise it will not work.
+
+# Your bot's token and client ID should go below.
+token: your-token-goes-here
+clientId: your-client-id-goes-here
+
+# These are the emojis that are used in chat for tiles (snake or otherwise.)
+emptyTileCharacter: "⬛️"
+snakeTileCharacter: "🟩"
+snakeHeadTileCharacter: "🟢"
+cheeseholeHeadTileCharacter: "⚪️"
+cheeseholeTileCharacter: "⬜️"
+deadHeadTileCharacter: "🔴"
+deadSnakeTileCharacter: "🟥"
+
+wallTileCharacter: "🧱"
+
+# A list of strings with emojis in them. Any emoji works, but don't add more than 1! 
+fruitTypes:
+- "🍎"
+- "🍐"
+- "🍊"
+- "🥝"
+- "🍓"
+- "🥒"
+- "🍖"
+
+# The enabled modifiers that are randomly selected.
+allowedModifiers:
+- standard
+- walls
+- cheese
+- threeFruits
+- borderless
+- largeBoard
+- smallBoard
+
+# The default board size.
+defaultBoardSizeX: 11
+defaultBoardSizeY: 9
+
+smallBoardSizeX: 9
+smallBoardSizeY: 7
+
+largeBoardSizeX: 17
+largeBoardSizeY: 15
+
+# Whether players can take multiple turns in a row.
+playersShouldTakeTurns: true
