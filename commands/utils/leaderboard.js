@@ -41,7 +41,7 @@ module.exports = {
                 break
             }
 
-            result += `${i + 1}. **${items[0][1].name}** at ${items[0][1].game.bestScore} points in ${items[0][1].game.bestMoves} moves.`
+            result += `${i + 1}. **${items[i][1].name}** at ${items[i][1].game.bestScore} points in ${items[i][1].game.bestMoves} moves.\n`
         }
 
 		await interaction.reply(result);

@@ -67,6 +67,7 @@ database.moveSnake = function (game, x, y) {
 		game.gameOver = false
 		game.gameReset = false
 		game.gameWon = false
+		game.gameStart = false
 
 		game.moves = 0
 
@@ -264,7 +265,7 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 				moves: 0,
 				bestMoves: 0,
 				gameOver: true,
-				gameReset: false,
+				gameStart: true,
 				snake: [
 				],
 				apples: [
@@ -283,7 +284,11 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 // This formats the message sent with interactions.
 database.formatMessage = function (game) {
 	// WALLED: 196, OTHER: 252
-	if (game.gameWon) {
+	if (game.gameStart) {
+		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
+# SNAKE
+## Click any button to start!`
+	} else if (game.gameWon) {
 		return `\`\`\`\n${renderText(game, database)}\n\`\`\`
 # YOU WIN! :D
 ## Final score: ${game.score}. Click any button below to reset.`
@@ -463,13 +468,13 @@ function checkDate() {
 	// Sort each guild based on the highest score. If two scores match, they are sorted by moves.
 	database.leaderboard = database.leaderboard.sort((a, b) => {
 		if (a[1].game.bestScore == b[1].game.bestScore) {
-			return b[1].game.bestMoves - a[1].game.bestMoves
-		} else return a[1].game.bestScore - b[1].game.bestScore
+			return a[1].game.bestMoves - b[1].game.bestMoves
+		} else return b[1].game.bestScore - a[1].game.bestScore
 	})
 }
 
 // Run every 60 seconds, so it isn't running unneccesarially fast
-setInterval(checkDate, 60e3)
+setInterval(checkDate, 30e3)
 
 // Also run now
 checkDate()
