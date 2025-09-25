@@ -21,3 +21,14 @@ Once that's done, run these commands:
 npm install
 npm start
 ```
+
+
+## To-do
+
+[X] Save best game scores and use those on the leaderboard
+
+[X] Button that resets the game when it should be reset (such as on a game over)
+
+[ ] Replace the config.json with YAML-based config because JSON has no comments and it's getting on my nerves
+
+[ ] Make the leaderboard more efficient

@@ -5,6 +5,7 @@ module.exports = {
 		.setName('about')
 		.setDescription('About this bot'),
 	async execute(interaction, database) {
+
 		await interaction.reply(`# Skoliosis <:skoliosis:1420223788213338184>
 *A bot made by ToasterPanic for [Converge](https://converge.hackclub.com/)*
 
@@ -15,5 +16,6 @@ module.exports = {
 - Every day, the leaderboard resets, and a new twist to the Snake formula appears! <:7005snakewhite:1420223849747845200>
 
 *\*Server owners will be able to disable this. New servers (<6 months old) must be verified manually.*`);
+
 	},
 };

@@ -1,0 +1,33 @@
+{
+	"token": "",
+    "clientId": "",
+
+    "emptyTileCharacter": "⬛️",
+    "snakeTileCharacter": "🟩",
+    "snakeHeadTileCharacter": "🟢",
+    "cheeseholeHeadTileCharacter": "⚪️",
+    "cheeseholeTileCharacter": "⬜️",
+    "deadSnakeTileCharacter": "🟨",
+
+    "wallTileCharacter": "🧱",
+
+    "1stSnakeTileCharacter": "🟨",
+    "2ndSnakeTileCharacter": "⬜️",
+    "3rdSnakeTileCharacter": "🟧",
+
+    "appleTileCharacter": "🍎",
+    "pearTileCharacter": "🍐",
+    "orangeTileCharacter": "🍊",
+    "kiwiTileCharacter": "🥝",
+    "strawberryTileCharacter": "🍓",
+
+    "allowedModifiers": [
+        "standard",
+        "walls",
+        "cheese",
+        "threeFruits",
+        "borderless"
+    ],
+
+    "playersShouldTakeTurns": true
+}

@@ -9,27 +9,12 @@ module.exports = {
         let game = data.game
 
         const up = new ButtonBuilder()
-			.setCustomId('up')
-			.setLabel('🔼')
-			.setStyle(ButtonStyle.Secondary);
-
-        const down = new ButtonBuilder()
-			.setCustomId('down')
-			.setLabel('🔽')
-			.setStyle(ButtonStyle.Secondary);
-
-        const left = new ButtonBuilder()
-			.setCustomId('left')
-			.setLabel('◀️')
-			.setStyle(ButtonStyle.Secondary);
-
-        const right = new ButtonBuilder()
-			.setCustomId('right')
-			.setLabel('▶️')
-			.setStyle(ButtonStyle.Secondary);
+			.setCustomId('button1')
+			.setLabel('me when when when when when when whenw h=jndksvml/zl')
+			.setStyle(ButtonStyle.Primary)
 
 		const row = new ActionRowBuilder()
-			.addComponents(up, down, left, right);
+			.addComponents(button1);
 
 		await interaction.reply({
             content: "```" + JSON.stringify(game) + "```",

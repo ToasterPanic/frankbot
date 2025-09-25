@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const { token, allowedModifiers } = require('./config.json');
+const { token, allowedModifiers, playersShouldTakeTurns } = require('./config.json');
 const { renderText } = require('./render.js');
 const { data } = require('./commands/utils/play.js');
 
@@ -17,6 +17,8 @@ const database = {
 
 database.moveSnake = function (game, x, y) {
 	let lastPosition = 0
+
+	game.moves += 1
 
 	// If game over, reset to normal when moving instead of making another move.
 	if (game.gameOver) {
@@ -57,6 +59,9 @@ database.moveSnake = function (game, x, y) {
 
 		game.gameOver = false
 		game.gameReset = false
+		game.gameWon = false
+
+		game.moves = 0
 
 		return
 	}
@@ -206,6 +211,11 @@ database.moveSnake = function (game, x, y) {
 		}
 	}
 
+	if ((game.score >= game.bestScore) && (game.moves >= game.bestMoves)) {
+		game.bestScore = game.score
+		game.bestMoves = game.moves
+	}
+
 	for (let j = 0; j < game.walls.length; ++j) {
 		if (
 			(game.walls[j][0] == game.snake[0][0]) &&
@@ -228,6 +238,11 @@ database.moveSnake = function (game, x, y) {
 			return
 		}
 	}
+
+	if (
+		((database.currentModifier == "walls") && (game.snake.length > 196)) ||
+		(game.snake.length > 252)
+	) game.gameWon = true
 }
 
 database.checkForGuildEntry = function (id, name, memberCount) {
@@ -238,6 +253,9 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 			game: {
 				lastInteractee: 0,
 				score: 0,
+				bestScore: 0,
+				moves: 0,
+				bestMoves: 0,
 				gameOver: true,
 				gameReset: false,
 				snake: [
@@ -257,6 +275,7 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 
 // This formats the message sent with interactions.
 database.formatMessage = function (game) {
+	// WALLED: 196, OTHER: 252
 	if (game.gameWon) {
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
 # YOU WIN! :D
@@ -311,7 +330,8 @@ client.on(Events.InteractionCreate, async interaction => {
 		let data = database.guilds[interaction.guild.id]
 		let game = data.game
 
-		if (game.lastInteractee == interaction.user.id && false) {
+		// Don't let people make more than one turn in a row
+		if (game.lastInteractee == interaction.user.id && playersShouldTakeTurns) {
 			await interaction.reply({
 				content: "**You can't make two turns in a row!** Let someone else have a turn first.",
 				ephemeral: true
@@ -332,28 +352,41 @@ client.on(Events.InteractionCreate, async interaction => {
 			database.moveSnake(game, 1, 0)
 		}
 
-		const up = new ButtonBuilder()
-			.setCustomId('up')
-			.setLabel('🔼')
-			.setStyle(ButtonStyle.Secondary);
+		let row = null
 
-		const down = new ButtonBuilder()
-			.setCustomId('down')
-			.setLabel('🔽')
-			.setStyle(ButtonStyle.Secondary);
+		if (game.gameOver) {
+			// Yes, the restart button just sends an UP input. I'm lazy.
+			const up = new ButtonBuilder()
+				.setCustomId('up')
+				.setLabel('Restart')
+				.setStyle(ButtonStyle.Danger);
 
-		const left = new ButtonBuilder()
-			.setCustomId('left')
-			.setLabel('◀️')
-			.setStyle(ButtonStyle.Secondary);
+			row = new ActionRowBuilder()
+				.addComponents(up);
+		} else {
+			const up = new ButtonBuilder()
+				.setCustomId('up')
+				.setLabel('🔼')
+				.setStyle(ButtonStyle.Secondary);
 
-		const right = new ButtonBuilder()
-			.setCustomId('right')
-			.setLabel('▶️')
-			.setStyle(ButtonStyle.Secondary);
+			const down = new ButtonBuilder()
+				.setCustomId('down')
+				.setLabel('🔽')
+				.setStyle(ButtonStyle.Secondary);
 
-		const row = new ActionRowBuilder()
-			.addComponents(up, down, left, right);
+			const left = new ButtonBuilder()
+				.setCustomId('left')
+				.setLabel('◀️')
+				.setStyle(ButtonStyle.Secondary);
+
+			const right = new ButtonBuilder()
+				.setCustomId('right')
+				.setLabel('▶️')
+				.setStyle(ButtonStyle.Secondary);
+
+			row = new ActionRowBuilder()
+				.addComponents(up, down, left, right);
+		}
 
 		await interaction.reply({
 			content: database.formatMessage(game),
@@ -395,6 +428,8 @@ function checkDate() {
 
 		for (let i = 0; i < Object.keys(database.guilds).length; ++i) {
 			database.guilds[Object.keys(database.guilds)[i]].game.gameReset = true
+			database.guilds[Object.keys(database.guilds)[i]].game.bestMoves = 0
+			database.guilds[Object.keys(database.guilds)[i]].game.bestScore = 0
 		}
 	}
 }
