@@ -2,16 +2,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const { token } = require('./config.json');
+const { token, allowedModifiers } = require('./config.json');
 const { renderText } = require('./render.js');
 const { data } = require('./commands/utils/play.js');
 
 // Init database
 const database = {
-	currentModifier: "cheese",
+	currentModifier: "standard",
 	guilds: {
 
-	}
+	},
+	currentDay: 0,
 }
 
 database.moveSnake = function (game, x, y) {
@@ -20,14 +21,15 @@ database.moveSnake = function (game, x, y) {
 	// If game over, reset to normal when moving instead of making another move.
 	if (game.gameOver) {
 		game.snake = [
-			[3, 1],
-			[2, 1],
-			[1, 1]
+			[5, 1, 0],
+			[4, 1, 0],
+			[3, 1, 0],
+			[2, 1, 0],
+			[1, 1, 0]
 		]
 
 		if (database.currentModifier == "cheese") {
 			game.snake = [
-				[6, 1, 1],
 				[5, 1, 0],
 				[4, 1, 1],
 				[3, 1, 0],
@@ -54,6 +56,7 @@ database.moveSnake = function (game, x, y) {
 		game.score = 0
 
 		game.gameOver = false
+		game.gameReset = false
 
 		return
 	}
@@ -64,6 +67,33 @@ database.moveSnake = function (game, x, y) {
 
 			game.snake[i][0] += x
 			game.snake[i][1] += y
+
+			if (database.currentModifier == "borderless") {
+				if (game.snake[i][0] < 0) {
+					game.snake[i][0] = 16
+				} else if (game.snake[i][0] > 16) {
+					game.snake[i][0] = 0
+				} else if (game.snake[i][1] < 0) {
+					game.snake[i][1] = 14
+				} else if (game.snake[i][1] > 14) {
+					game.snake[i][1] = 0
+				}
+			} else {
+				if (
+					(game.snake[i][0] < 0) ||
+					(game.snake[i][0] > 16) ||
+					(game.snake[i][1] < 0) ||
+					(game.snake[i][1] > 14)
+				) {
+					game.gameOver = true
+
+					game.snake[i][0] = lastPosition[0]
+					game.snake[i][1] = lastPosition[1]
+					game.snake[i][2] = lastPosition[2]
+
+					break
+				}
+			}
 
 			if (database.currentModifier == "cheese") {
 				game.snake[i][2] = (game.snake[i][2] == 0) ? 1 : 0
@@ -86,11 +116,62 @@ database.moveSnake = function (game, x, y) {
 
 			game.snake.push(lastPosition)
 
+			if (database.currentModifier == "walls") {
+				let correctSpot = false
+
+				let wall = [0, 0]
+
+				let attempts = 0
+
+				while (!correctSpot) {
+					wall[0] = (Math.floor((Math.random() * 8)) * 2) + 1
+					wall[1] = (Math.floor((Math.random() * 7)) * 2) + 1
+
+					correctSpot = true
+
+					for (let k = 0; k < game.snake.length; ++k) {
+						if (
+							(game.apples[j][0] == game.snake[k][0]) &&
+							(game.apples[j][1] == game.snake[k][1])
+						) {
+							correctSpot = false
+						}
+					}
+
+					for (let k = 0; k < game.walls.length; ++k) {
+						if (
+							(game.apples[j][0] == game.walls[k][0]) &&
+							(game.apples[j][1] == game.walls[k][1])
+						) {
+							correctSpot = false
+						}
+					}
+
+					for (let k = 0; k < game.apples.length; ++k) {
+						if (
+							(game.apples[j][0] == game.apples[k][0]) &&
+							(game.apples[j][1] == game.apples[k][1]) &&
+							(j != k)
+						) {
+							correctSpot = false
+						}
+					}
+
+					++attempts
+
+					if (attempts > 50) {
+						break
+					}
+				}
+
+				game.walls.push(wall)
+			}
+
 			let correctSpot = false
 
 			while (!correctSpot) {
-				game.apples[j][0] = Math.floor(Math.random() * 15)
-				game.apples[j][1] = Math.floor(Math.random() * 17)
+				game.apples[j][0] = Math.floor(Math.random() * 17)
+				game.apples[j][1] = Math.floor(Math.random() * 15)
 
 				correctSpot = true
 
@@ -132,7 +213,7 @@ database.moveSnake = function (game, x, y) {
 		) {
 			game.gameOver = true
 
-			break
+			return
 		}
 	}
 
@@ -140,12 +221,11 @@ database.moveSnake = function (game, x, y) {
 		if (
 			(game.snake[j][0] == game.snake[0][0]) &&
 			(game.snake[j][1] == game.snake[0][1]) &&
-			(game.snake[j][2] != 0)
+			(game.snake[j][2] == 0)
 		) {
-			console.log(game.snake[j][2])
 			game.gameOver = true
 
-			break
+			return
 		}
 	}
 }
@@ -159,6 +239,7 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 				lastInteractee: 0,
 				score: 0,
 				gameOver: true,
+				gameReset: false,
 				snake: [
 				],
 				apples: [
@@ -174,23 +255,26 @@ database.checkForGuildEntry = function (id, name, memberCount) {
 	}
 }
 
+// This formats the message sent with interactions.
 database.formatMessage = function (game) {
-	if (game.gameOver) {
-		return `\`\`\`\n${renderText(game)}\n\`\`\`
-# GAME OVER! :(
-## Final score: ${game.score}. Click any button below to reset.`
-	} else if (game.gameWon) {
+	if (game.gameWon) {
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
 # YOU WIN! :D
 ## Final score: ${game.score}. Click any button below to reset.`
 	} else if (game.gameReset) {
+		game.gameOver = true
+
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
 # GAME END!
 ## You've run out of time. Leaderboard and modifiers have been reset.
 ## Final score: ${game.score}. Click any button below to reset.`
-	} {
+	} else if (game.gameOver) {
 		return `\`\`\`\n${renderText(game)}\n\`\`\`
-## Score: ${game.score}. Click the buttons below to play!`
+# GAME OVER! :(
+## Final score: ${game.score}. Click any button below to reset.`
+	} else {
+		return `\`\`\`\n${renderText(game)}\n\`\`\`
+## Score: ${game.score}. Modifier: ${database.currentModifier} Click the buttons to play!`
 	}
 }
 
@@ -298,6 +382,28 @@ client.on(Events.InteractionCreate, async interaction => {
 		}
 	}
 });
+
+// Checks the date and updates things when needed
+function checkDate() {
+	const now = new Date();
+
+	// If it is the next day, reset it all!
+	if (now.getUTCDate() != database.currentDay) {
+		database.currentDay = now.getUTCDate()
+
+		database.currentModifier = allowedModifiers[Math.floor(Math.random() * allowedModifiers.length)]
+
+		for (let i = 0; i < Object.keys(database.guilds).length; ++i) {
+			database.guilds[Object.keys(database.guilds)[i]].game.gameReset = true
+		}
+	}
+}
+
+// Run every 60 seconds, so it isn't running unneccesarially fast
+setInterval(checkDate, 15e3)
+
+// Also run now
+checkDate()
 
 // When the client is ready, run this code (only once).
 // The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.

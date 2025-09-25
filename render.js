@@ -1,4 +1,12 @@
-const { emptyTileCharacter, snakeTileCharacter, cheeseholeTileCharacter, appleTileCharacter, wallTileCharacter} = require('./config.json');
+const {
+    emptyTileCharacter,
+    snakeTileCharacter,
+    snakeHeadTileCharacter,
+    cheeseholeTileCharacter,
+    cheeseholeHeadTileCharacter,
+    appleTileCharacter,
+    wallTileCharacter
+} = require('./config.json');
 
 module.exports = {
     renderText: function (game) {
@@ -45,7 +53,7 @@ module.exports = {
 
         }
 
-        for (let i = 0; i < game.snake.length; ++i) {
+        for (let i = game.snake.length; i >= 0; --i) {
             let position = game.snake[i]
             if (!position) continue;
 
@@ -53,12 +61,22 @@ module.exports = {
 
             let sectionA = result.slice(0, character - 1)
 
-            // If position[2] exists, that means it's a cheese hole.
-            if (!position[2]) {
-                sectionA += "C"
+
+            if (i == 0) {
+                // If position[2] exists, that means it's a cheese hole.
+                if (position[2]) {
+                    sectionA += "c"
+                } else {
+                    sectionA += "s"
+                }
             } else {
-                sectionA += "S"
+                if (position[2]) {
+                    sectionA += "C"
+                } else {
+                    sectionA += "S"
+                }
             }
+
 
             let sectionB = result.slice(character)
 
@@ -70,6 +88,8 @@ module.exports = {
             .replaceAll("W", wallTileCharacter)
             .replaceAll("S", snakeTileCharacter)
             .replaceAll("C", cheeseholeTileCharacter)
+            .replaceAll("s", snakeHeadTileCharacter)
+            .replaceAll("c", cheeseholeHeadTileCharacter)
             .replaceAll("A", appleTileCharacter)
             .replaceAll(".", emptyTileCharacter)
 
